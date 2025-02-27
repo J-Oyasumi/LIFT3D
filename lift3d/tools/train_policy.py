@@ -26,7 +26,6 @@ def main(config):
     )
     Logger.log_info(f'Task: {colored(config.task_name, "green")}')
     Logger.log_info(f'Dataset directory: {colored(config.dataset_dir, "green")}')
-    Logger.log_info(f'Image size: {colored(config.image_size, "green")}')
     Logger.log_info(
         f'WandB: Project {colored(config.wandb.project, "green")}; '
         f'Group {colored(config.wandb.group, "green")}; '
@@ -63,11 +62,13 @@ def main(config):
     ##########################
     train_dataset = instantiate(
         config=config.benchmark.dataset_instantiate_config,
+        task_name=config.task_name,
         data_dir=config.dataset_dir,
         split="train",
     )
     valid_dataset = instantiate(
         config=config.benchmark.dataset_instantiate_config,
+        task_name=config.task_name,
         data_dir=config.dataset_dir,
         split="validation",
     )
@@ -83,6 +84,7 @@ def main(config):
         torch.utils.data.DataLoader,
         batch_size=config.dataloader.batch_size,
         num_workers=config.dataloader.num_workers,
+        drop_last=config.dataloader.drop_last,
         shuffle=config.dataloader.shuffle,
         pin_memory=config.dataloader.pin_memory,
     )
@@ -150,6 +152,7 @@ def main(config):
             point_clouds = point_clouds.to(config.device)
             robot_states = robot_states.to(config.device)
             actions = actions.to(config.device, non_blocking=True)
+                        
             preds = model(images, point_clouds, robot_states, texts)
             loss_result = call(config.benchmark.loss_func, preds, actions)
 
@@ -216,6 +219,7 @@ def main(config):
                 point_clouds = point_clouds.to(config.device)
                 robot_states = robot_states.to(config.device)
                 actions = actions.to(config.device, non_blocking=True)
+                                
                 with torch.no_grad():
                     preds = model(images, point_clouds, robot_states, texts)
                 loss_result = call(config.benchmark.loss_func, preds, actions)
@@ -229,33 +233,34 @@ def main(config):
                     loss_val.update(loss_result.item(), actions.shape[0])
 
             # validation success and rewards
-            avg_success, avg_rewards = evaluator.evaluate(
+            avg_success = evaluator.evaluate(
                 config.evaluation.validation_trajs_num, model
             )
-            max_success, max_rewards = max(max_success, avg_success), max(
-                max_rewards, avg_rewards
-            )
+            # max_success, max_rewards = max(max_success, avg_success), max(
+            #     max_rewards, avg_rewards
+            # )
+            max_success = max(max_success, avg_success)
             epoch_logging_info.update(
                 {
                     "validation/epoch": cur_epoch,
                     "validation/loss": loss_val.avg,
                     "validation/success": avg_success,
-                    "validation/rewards": avg_rewards,
+                    # "validation/rewards": avg_rewards,
                     "validation/max_success": max_success,
-                    "validation/max_rewards": max_rewards,
-                    "validation/video_steps": wandb.Video(
-                        evaluator.env.get_frames().transpose(0, 3, 1, 2), fps=30
-                    ),
+                    # "validation/max_rewards": max_rewards,
+                    # "validation/video_steps": wandb.Video(
+                    #     evaluator.env.get_frames().transpose(0, 3, 1, 2), fps=30
+                    # ),
                 }
             )
-            evaluator.callback(epoch_logging_info)
+            # evaluator.callback(epoch_logging_info) 
             Logger.log_info(
                 f"[validation] epoch={cur_epoch}, "
                 f"validation_loss={loss_val.avg}, "
                 f"avg_success={avg_success}, "
-                f"avg_rewards={avg_rewards}, "
+                # f"avg_rewards={avg_rewards}, "
                 f"max_success={max_success}, "
-                f"max_rewards={max_rewards}"
+                # f"max_rewards={max_rewards}"
             )
 
             # save best model
@@ -280,7 +285,7 @@ def main(config):
                         "epoch": cur_epoch,
                         "loss": loss_val.avg,
                         "avg_success": avg_success,
-                        "avg_rewards": avg_rewards,
+                        # "avg_rewards": avg_rewards,
                     }
                     json.dump(model_info, f, indent=4)
 

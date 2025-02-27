@@ -1,0 +1,13 @@
+name: ManiSkill
+
+dataset_instantiate_config:
+  _target_: lift3d.dataset.ManiSkillDataset
+
+evaluator_instantiate_config:
+  _target_: lift3d.envs.ManiSkillEvaluator
+  use_point_crop: True
+  num_points: 1024
+
+
+loss_func:
+  _target_: torch.nn.functional.mse_loss
