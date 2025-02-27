@@ -18,3 +18,11 @@
 [submodule "lift3d/models/pointnet/Pointnet_Pointnet2_pytorch"]
     path = lift3d/models/pointnet/Pointnet_Pointnet2_pytorch
     url = https://github.com/yanx27/Pointnet_Pointnet2_pytorch.git
+
+[submodule "RoboTwin"]
+    path = ./RoboTwin
+    url = https://github.com/J-Oyasumi/RoboTwin.git
+
+[submodule "ManiSkill"]
+    path = ./ManiSkill
+    url = https://github.com/J-Oyasumi/ManiSkill.git
