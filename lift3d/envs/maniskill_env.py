@@ -4,7 +4,6 @@ import torch
 import tqdm
 import numpy as np 
 from termcolor import colored
-
 import mani_skill.envs
 from lift3d.envs.evaluator import Evaluator
 from diffusion_policy_3d.common.utils import downsample_with_fps
@@ -52,7 +51,7 @@ class ManiSkillEnv(gymnasium.Env):
         self.step_count = 0
     
     def get_robot_state(self):
-        obs = self.env.get_obs()
+        obs = self.env.get_wrapper_attr('get_obs')()
         qpos = obs['agent']['qpos'][...][0]
         qvel = obs['agent']['qvel'][...][0]
         tcp_pose = obs['extra']['tcp_pose'][...][0]
@@ -61,7 +60,7 @@ class ManiSkillEnv(gymnasium.Env):
         return robot_state
     
     def get_point_cloud(self):
-        obs = self.env.get_obs()
+        obs = self.env.get_wrapper_attr('get_obs')()
         xyzw = obs["pointcloud"]['xyzw'][...][0]
         rgb = obs["pointcloud"]['rgb'][...][0]
         filtered_xyzw = xyzw[xyzw[:, -1] == 1]
@@ -93,7 +92,7 @@ class ManiSkillEnv(gymnasium.Env):
         return obs_point_cloud
     
     def get_rgb(self):
-        obs = self.env.get_obs()
+        obs = self.env.get_wrapper_attr('get_obs')()
         image = obs['sensor_data']['base_camera']['rgb'][0]
         image = image.cpu().numpy()
         return image
@@ -121,8 +120,8 @@ class ManiSkillEnv(gymnasium.Env):
         obs = self.get_obs()
         self.step_count += 1
         done = terminated or self.step_count >= self.max_episode_length
-        success = self.env.evaluate()['success'].item()
-        
+        success = self.env.get_wrapper_attr('evaluate')()['success'].item()
+        print(f'step: {self.step_count}, success:{success}')
         return obs, done, success 
                 
 class ManiSkillEvaluator():
@@ -137,10 +136,11 @@ class ManiSkillEvaluator():
             use_point_crop=use_point_crop,
             num_points=num_points,
         )
+        
 
     def evaluate(self, num_episodes, policy, verbose: bool = False):
-        task_name = Wrapper.get_wrapper_attr(self.env, "task_name")
-
+        # task_name = Wrapper.get_wrapper_attr(self.env, "task_name")
+        task_name = self.env.task_name
         if verbose:
             success_list, rewards_list = [], []
             video_steps_list = []
